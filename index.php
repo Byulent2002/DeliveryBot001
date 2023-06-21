@@ -34,10 +34,10 @@ function createOrderReport($order) {
     return $report;
 }
 
-$offset = null;
-$cart = []; // Додати ТРЕБА змінну для зберігання корзини
-$selectedCity = null; // Додайти ТРЕБА зміну для зберігання вибраного міста
-$selectedCompany = null; // Додайти ТРЕБА зміну для зберігання вибраної компанії
+    $offset = null;
+    $cart = []; // Змінна для зберігання корзини
+    $selectedCity = null; // Змінна для зберігання вибраного міста
+    $selectedCompany = null; // Змінна для зберігання вибраної компанії
 
 while (true) {
     $updates = getUpdates($offset);
@@ -59,97 +59,112 @@ while (true) {
                     ];
                     sendMessage($chatId, 'Ласкаво просимо! Будь ласка, виберіть місто:', $cityKeyboard);
                 } elseif (in_array($message, ['Київ', 'Чернігів', 'Харків'])) {
-                    $selectedCity = $message; // Збережіть вибране місто
+                    $selectedCity = $message; // Збереження вибраного міста
                     $companyKeyboard = [
                         'keyboard' => [
-                            [['text' => 'Компанія 1']],
-                            [['text' => 'Компанія 2']],
-                            [['text' => 'Компанія 3']],
+                            [['text' => 'Pizza Bit']],
+                            [['text' => 'La Pizza']],
+                            [['text' => 'IQ Pizza']],
                             [['text' => 'Редагувати місто']],
-                            ],
-                            'resize_keyboard' => true
-                            ];
+                        ],
+                        'resize_keyboard' => true
+                    ];
                     sendMessage($chatId, 'Ви вибрали: ' . $selectedCity . '. Будь ласка, виберіть компанію:', $companyKeyboard);
-                } elseif (in_array($message, ['Компанія 1', 'Компанія 2', 'Компанія 3'])) {
-                    $selectedCompany = $message;
-                        // Збереження вибраної компанії
+                } elseif (in_array($message, ['Pizza Bit', 'La Pizza', 'IQ Pizza'])) {
+                    $selectedCompany = $message; // Збереження вибраної компанії
                     $menuKeyboard = [
-                            'keyboard' => [
-                            [['text' => 'Страва 1']],
-                            [['text' => 'Страва 2']],
-                            [['text' => 'Страва 3']],
+                        'keyboard' => [
+                            [['text' => 'Піца']],
+                            [['text' => 'Бургер']],
+                            [['text' => 'Картопля фрі']],
                             [['text' => 'Редагувати компанію']],
-                            ],
-                            'resize_keyboard' => true
-                            ];
+                        ],
+                        'resize_keyboard' => true
+                    ];
                     sendMessage($chatId, 'Ви вибрали: ' . $selectedCompany . '. Будь ласка, виберіть страву:', $menuKeyboard);
-                } elseif (in_array($message, ['Страва 1', 'Страва 2', 'Страва 3'])) {
-            if ($selectedCity === null || $selectedCompany === null) {
-                    sendMessage($chatId, 'Будь ласка, спочатку виберіть місто та компанію.');
-                } else {
-                    $cart[] = ['city' => $selectedCity, 'company' => $selectedCompany, 'item' => $message];
-                    sendMessage($chatId, 'Ви додали ' . $message . ' від ' . $selectedCompany . ' у місто ' . $selectedCity . ' до вашої корзини. Бажаєте ще щось?');
-                }
+                } elseif (in_array($message, ['Піца', 'Бургер', 'Картопля фрі'])) {
+                    if ($selectedCity === null || $selectedCompany === null) {
+                        sendMessage($chatId, 'Будь ласка, спочатку виберіть місто та компанію.');
+                    } else {
+                        array_push($cart, [
+                                'id' => $chatId, // Збереження ID користувача телеграм у корзині
+                                'city' => $selectedCity,
+                                'company' => $selectedCompany,
+                                'item' => $message
+                             ]);
+                             
+                        sendMessage($chatId, 'Ви додали ' . $message . ' від ' . $selectedCompany . ' у місто ' . $selectedCity . ' до вашої корзини. Бажаєте ще щось?');
+                    }
                 } elseif ($message === 'Перевірити корзину') {
-            if (empty($cart)) {
-                    sendMessage($chatId, 'Ваша корзина порожня.');
-                } else {
-                    $cartText = 'Ваша корзина:';
-                        foreach ($cart as $item) {
-                    $cartText .= "\n" . $item['item'] . ' від ' . $item['company'] . ' у місто ' . $item['city'];
-                }
-                    sendMessage($chatId, $cartText);
+                    $userCart = array_filter($cart, function ($item) use ($chatId) {
+                        return $item['id'] === $chatId;
+                    });
+                    if (empty($userCart)) {
+                        sendMessage($chatId, 'Ваша корзина порожня.');
+                    } else {
+                        $cartText = 'Ваша корзина:';
+                        foreach ($userCart as $item) {
+                            $cartText .= "\n" . $item['item'] . ' від ' . $item['company'] . ' у місто ' . $item['city'];
+                        }
+                        sendMessage($chatId, $cartText);
                     }
                 } elseif ($message === 'Очистити корзину') {
-                $cart = [];
+                    $cart = array_filter($cart, function ($item) use ($chatId) {
+                        return $item['id'] !== $chatId;
+                    });
                     sendMessage($chatId, 'Ваша корзина була очищена.');
                 } elseif ($message === 'Редагувати місто') {
-                $selectedCity = null;
-                $cityKeyboard = [
-                            'keyboard' => [
+                    $selectedCity = null;
+                    $cityKeyboard = [
+                        'keyboard' => [
                             [['text' => 'Київ']],
                             [['text' => 'Чернігів']],
                             [['text' => 'Харків']],
                             [['text' => 'Редагувати місто']],
-                            ],
-                            'resize_keyboard' => true
-                            ];
-                sendMessage($chatId, 'Будь ласка, виберіть нове місто:', $cityKeyboard);
+                        ],
+                        'resize_keyboard' => true
+                    ];
+                    sendMessage($chatId, 'Будь ласка, виберіть нове місто:', $cityKeyboard);
                 } elseif ($message === 'Редагувати компанію') {
-                $selectedCompany = null;
-                $companyKeyboard = [
-                            'keyboard' => [
-                            [['text' => 'Компанія 1']],
-                            [['text' => 'Компанія 2']],
-                            [['text' => 'Компанія 3']],
+                    $selectedCompany = null;
+                    $companyKeyboard = [
+                        'keyboard' => [
+                            [['text' => 'Pizza Bit']],
+                            [['text' => 'La Pizza']],
+                            [['text' => 'IQ Pizza']],
                             [['text' => 'Редагувати компанію']],
-                            ],
-                            'resize_keyboard' => true
-                            ];
-                sendMessage($chatId, 'Будь ласка, виберіть нову компанію:', $companyKeyboard);
+                        ],
+                        'resize_keyboard' => true
+                    ];
+                    sendMessage($chatId, 'Будь ласка, виберіть нову компанію:', $companyKeyboard);
                 } elseif (in_array($message, ['так', 'ні'])) {
                     if ($message === 'ні') {
-                    // Створення звіту
-                $orderId = uniqid(); // Унікальний ідентифікатор замовлення
-                $order = [
+                        // Створення звіту
+                        $orderId = uniqid(); // Унікальний ідентифікатор замовлення
+                        $userCart = array_filter($cart, function ($item) use ($chatId) {
+                            return $item['id'] === $chatId;
+                        });
+                        $order = [
                             'id' => $orderId,
                             'city' => $selectedCity,
                             'company' => $selectedCompany,
-                            'items' => array_column($cart, 'item')
-                            ];
-                $orderReport = createOrderReport($order);
-                sendMessage($chatId, "Ваше замовлення розміщено. Дякуємо!☺️\n\nЗвіт замовлення:\n{$orderReport}");
-                // Очищення корзини
-                $cart = [];
-                // Відправлення звіту адміністратору
-                $adminChatId = '123456789'; // ТРЕБА замінити на фактичний chat_id адміністратора чи ще чогось
-                sendMessage($adminChatId, "Нове замовлення отримано:\n\n{$orderReport}");
-                } else {
-                    sendMessage($chatId, 'Ваше замовлення скасовано.');
+                            'items' => array_column($userCart, 'item')
+                        ];
+                        $orderReport = createOrderReport($order);
+                        sendMessage($chatId, "Ваше замовлення розміщено. Дякуємо!☺️\n\nЗвіт замовлення:\n{$orderReport}");
+                        // Очищення корзини
+                        $cart = array_filter($cart, function ($item) use ($chatId) {
+                            return $item['id'] !== $chatId;
+                        });
+                        // Відправлення звіту адміністратору
+                        $adminChatId = '123456789'; // ТРЕБА замінити на фактичний chat_id адміністратора чи ще чогось
+                        sendMessage($adminChatId, "Нове замовлення отримано:\n\n{$orderReport}");
+                    } else {
+                        sendMessage($chatId, 'Ваше замовлення скасовано.');
+                    }
                 }
             }
         }
     }
-}
 }
 ?>
